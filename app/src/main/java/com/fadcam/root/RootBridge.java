@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -83,9 +84,15 @@ public final class RootBridge {
                 os.write("exit\n".getBytes(StandardCharsets.UTF_8));
                 os.flush();
             }
-            Future<String> outF = IO.submit(() -> readAll(proc.getInputStream()));
-            Future<String> errF = IO.submit(() -> readAll(proc.getErrorStream()));
-            Future<Integer> exitF = IO.submit(proc::waitFor);
+            Future<String> outF = IO.submit(new Callable<String>() {
+                @Override public String call() throws Exception { return readAll(proc.getInputStream()); }
+            });
+            Future<String> errF = IO.submit(new Callable<String>() {
+                @Override public String call() throws Exception { return readAll(proc.getErrorStream()); }
+            });
+            Future<Integer> exitF = IO.submit(new Callable<Integer>() {
+                @Override public Integer call() throws Exception { return proc.waitFor(); }
+            });
             int code = exitF.get(timeoutMs, TimeUnit.MILLISECONDS);
             return new Result(code, outF.get(1, TimeUnit.SECONDS), errF.get(1, TimeUnit.SECONDS));
         } catch (TimeoutException e) {
