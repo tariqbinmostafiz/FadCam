@@ -257,6 +257,10 @@ public class RecordingService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        // Phase1: remember if the previous process died mid-recording. Must be read BEFORE
+        // finalizeStaleRecordingIfNeeded() below, because that scan can clear the flag.
+        resumeAfterKillCandidate = getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(Constants.PREF_IS_RECORDING_IN_PROGRESS, false);
         // Initialize essential components first
         sharedPreferencesManager = SharedPreferencesManager.getInstance(getApplicationContext());
         initializeDurationLimitController();
@@ -1471,8 +1475,18 @@ public class RecordingService extends Service {
     }
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {        if (intent == null) {
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        final boolean resumeCandidate = resumeAfterKillCandidate;
+        resumeAfterKillCandidate = false; // consume once per process
+        if (intent == null) {
             FLog.d(TAG, "onStartCommand received null intent. Ensuring service stays alive.");
+            if (resumeCandidate && recordingState == RecordingState.NONE && !previewOnlyActive
+                    && allowAutoResume()) {
+                FLog.w(TAG, "Previous session was killed mid-recording -> auto-resuming (new segment)");
+                Intent resume = new Intent(this, RecordingService.class);
+                resume.setAction(Constants.INTENT_ACTION_START_RECORDING);
+                return onStartCommand(resume, flags, startId);
+            }
             return START_STICKY;
         }
         String action = intent.getAction();
@@ -2183,6 +2197,8 @@ public class RecordingService extends Service {
 
         // Stop any active reconnection attempts
         stopReconnectionAttempts();
+
+        com.fadcam.root.RootTuner.onRecordingStopped(getApplicationContext());
 
         // Make sure dummy surface is released
         releaseDummyBackgroundSurface();
@@ -7167,6 +7183,8 @@ public class RecordingService extends Service {
 
             if (recordingWakeLock != null && !recordingWakeLock.isHeld())
                 recordingWakeLock.acquire();
+            // Phase1 (root, optional): keep-alive tuning while recording. No-op without root.
+            com.fadcam.root.RootTuner.onRecordingStarted(getApplicationContext());
 
             ensureWatermarkInfoProvider();
 
@@ -7441,7 +7459,70 @@ public class RecordingService extends Service {
     // Flag to track if we need to automatically resume recording after camera
     // interruption
     private boolean pendingCameraReconnect = false;
-    private static final long RECONNECT_RETRY_DELAY_MS = 2000; // 2 seconds between reconnection attempts
+    private static final long RECONNECT_RETRY_DELAY_MS = 2000; // legacy base delay (kept for reference)
+    // Phase1: back-off schedule; a CameraManager availability callback triggers an immediate retry on top of it.
+    private static final long[] RECONNECT_BACKOFF_MS = {1000, 2000, 2000, 3000, 5000};
+    private int reconnectAttempt = 0;
+    private long lastAvailabilityRetryMs = 0;
+    private CameraManager.AvailabilityCallback reconnectAvailabilityCallback;
+
+    /** Set in onCreate: true when the previous process was killed while a recording was in progress. */
+    private boolean resumeAfterKillCandidate = false;
+    private static final int RESUME_MAX_PER_WINDOW = 3;
+    private static final long RESUME_WINDOW_MS = 10 * 60 * 1000L;
+
+    /** Crash-loop guard: at most 3 automatic resumes per 10 minutes. */
+    private boolean allowAutoResume() {
+        android.content.SharedPreferences g = getSharedPreferences("fadcam_resume_guard", Context.MODE_PRIVATE);
+        long now = System.currentTimeMillis();
+        long windowStart = g.getLong("window_start", 0L);
+        int count = g.getInt("count", 0);
+        if (now - windowStart > RESUME_WINDOW_MS) {
+            windowStart = now;
+            count = 0;
+        }
+        if (count >= RESUME_MAX_PER_WINDOW) {
+            FLog.w(TAG, "Auto-resume suppressed (limit reached in current window)");
+            return false;
+        }
+        g.edit().putLong("window_start", windowStart).putInt("count", count + 1).apply();
+        return true;
+    }
+
+    private void registerReconnectAvailabilityCallback(final String cameraId) {
+        unregisterReconnectAvailabilityCallback();
+        if (cameraManager == null || cameraId == null) return;
+        reconnectAvailabilityCallback = new CameraManager.AvailabilityCallback() {
+            @Override
+            public void onCameraAvailable(@NonNull String id) {
+                if (!pendingCameraReconnect || !cameraId.equals(id)) return;
+                long now = System.currentTimeMillis();
+                if (now - lastAvailabilityRetryMs < 500) return; // debounce
+                lastAvailabilityRetryMs = now;
+                FLog.i(TAG, "Camera " + id + " became available -> immediate reconnect attempt");
+                if (reconnectRunnable != null) {
+                    reconnectHandler.removeCallbacks(reconnectRunnable);
+                    reconnectHandler.post(reconnectRunnable);
+                }
+            }
+        };
+        try {
+            cameraManager.registerAvailabilityCallback(reconnectAvailabilityCallback, reconnectHandler);
+        } catch (Exception e) {
+            FLog.w(TAG, "registerAvailabilityCallback failed", e);
+            reconnectAvailabilityCallback = null;
+        }
+    }
+
+    private void unregisterReconnectAvailabilityCallback() {
+        if (reconnectAvailabilityCallback != null && cameraManager != null) {
+            try {
+                cameraManager.unregisterAvailabilityCallback(reconnectAvailabilityCallback);
+            } catch (Exception ignored) {
+            }
+        }
+        reconnectAvailabilityCallback = null;
+    }
     private Handler reconnectHandler = new Handler(Looper.getMainLooper());
     private Runnable reconnectRunnable;
 
@@ -7464,12 +7545,16 @@ public class RecordingService extends Service {
                 tryReconnectCamera(cameraId);
                 // Always schedule the next attempt as long as pendingCameraReconnect is true
                 if (pendingCameraReconnect) {
-                    reconnectHandler.postDelayed(this, RECONNECT_RETRY_DELAY_MS);
+                    long delay = RECONNECT_BACKOFF_MS[Math.min(reconnectAttempt, RECONNECT_BACKOFF_MS.length - 1)];
+                    reconnectAttempt++;
+                    reconnectHandler.postDelayed(this, delay);
                 }
             }
         };
+        reconnectAttempt = 0;
+        registerReconnectAvailabilityCallback(cameraId);
         reconnectHandler.post(reconnectRunnable);
-        FLog.d(TAG, "Started camera reconnection attempts (infinite)");
+        FLog.d(TAG, "Started camera reconnection attempts (infinite, back-off + availability callback)");
     }
 
     /**
@@ -7705,6 +7790,8 @@ public class RecordingService extends Service {
      */
     private void stopReconnectionAttempts() {
         pendingCameraReconnect = false;
+        reconnectAttempt = 0;
+        unregisterReconnectAvailabilityCallback();
         if (reconnectHandler != null && reconnectRunnable != null) {
             reconnectHandler.removeCallbacks(reconnectRunnable);
         }

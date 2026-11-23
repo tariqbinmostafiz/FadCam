@@ -1,0 +1,6 @@
+id=fadcam_guardian
+name=FadCam Guardian
+version=v0.1
+versionCode=1
+author=Sifat
+description=Restarts an interrupted FadCam recording after a crash, kill or reboot (root watchdog).

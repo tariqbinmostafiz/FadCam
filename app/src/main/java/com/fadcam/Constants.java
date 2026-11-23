@@ -94,7 +94,7 @@ public abstract class Constants {
     public static final String PREF_REMOTE_AUTH_AUTO_LOCK_TIMEOUT = "remote_auth_auto_lock_timeout"; // in minutes, 0 = never
     public static final String PREF_REMOTE_AUTH_SESSIONS = "remote_auth_sessions"; // JSON string of active sessions
     public static final long REMOTE_AUTH_TOKEN_EXPIRY_MS = 24L * 60 * 60 * 1000; // 24 hours
-    public static final int REMOTE_AUTH_MIN_PASSWORD_LENGTH = 4;
+    public static final int REMOTE_AUTH_MIN_PASSWORD_LENGTH = 8;
     public static final int REMOTE_AUTH_MAX_PASSWORD_LENGTH = 32;
     
     /**
@@ -109,6 +109,8 @@ public abstract class Constants {
     // Crimson Bloom
     public static final String PREF_IS_RECORDING_IN_PROGRESS =
         "is_recording_in_progress";
+    /** Root mode kill-switch (RootTuner). Default true; does nothing without root. */
+    public static final String PREF_ROOT_MODE_ENABLED = "root_mode_enabled";
     // Camera runtime control preferences (persisted when user changes controls
     // while not recording)
     public static final String PREF_EXPOSURE_COMPENSATION =
