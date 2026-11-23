@@ -25,6 +25,17 @@ jobs:
           git clone --depth 1 https://github.com/anonfaded/media3-patched.git /tmp/media3-patched
           echo "Patched Media3 cloned"
 
+      # একই build-এ দুটো আলাদা AGP ভার্সন চলে না (app 8.13.1 বনাম media3-patched 8.13.2 → বিল্ড ফেইল হয়েছিল)।
+      # তাই app-এর agp ভার্সন media3-patched-এর সাথে নিজে থেকে মিলিয়ে নেওয়া হয়।
+      - name: Sync AGP version with patched Media3
+        shell: bash
+        run: |
+          AGP=$(grep -oP "com.android.tools.build:gradle:\K[0-9.]+" /tmp/media3-patched/build.gradle | head -1)
+          if [ -z "$AGP" ]; then echo "Could not detect AGP version in media3-patched"; exit 1; fi
+          echo "media3-patched AGP: $AGP"
+          sed -i "s/^agp = \".*\"/agp = \"$AGP\"/" gradle/libs.versions.toml
+          grep '^agp' gradle/libs.versions.toml
+
       # gradle-daemon-jvm.properties নিজেই JDK 21 daemon নামিয়ে নেয়; পুরনো কাজ-করা workflow-এর মতোই 17 রাখা হলো
       - name: Set up Java 17
         uses: actions/setup-java@v4
