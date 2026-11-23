@@ -7,7 +7,13 @@ import android.content.SharedPreferences;
 import com.fadcam.Constants;
 import com.fadcam.streaming.model.SessionToken;
 
+import android.os.Build;
+import android.util.Base64;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Map;
@@ -111,8 +117,23 @@ public class RemoteAuthManager {
             return false;
         }
         
-        String inputHash = hashPassword(password);
-        boolean isValid = storedHash.equals(inputHash);
+        boolean isValid;
+        if (storedHash.startsWith(PBKDF2_PREFIX)) {
+            isValid = verifyPbkdf2(storedHash, password);
+        } else {
+            // Legacy unsalted SHA-256 hash: verify (constant-time), then upgrade to PBKDF2.
+            String legacy = legacySha256Hex(password);
+            isValid = legacy != null && MessageDigest.isEqual(
+                    storedHash.getBytes(StandardCharsets.UTF_8),
+                    legacy.getBytes(StandardCharsets.UTF_8));
+            if (isValid) {
+                String upgraded = hashPassword(password);
+                if (upgraded != null) {
+                    prefs.edit().putString(Constants.PREF_REMOTE_AUTH_PASSWORD_HASH, upgraded).apply();
+                    FLog.i(TAG, "Password hash upgraded to PBKDF2");
+                }
+            }
+        }
         
         if (!isValid) {
             FLog.d(TAG, "Password verification failed: hash mismatch");
@@ -232,9 +253,9 @@ public class RemoteAuthManager {
     }
     
     /**
-     * Hash password using SHA-256
+     * Legacy hash (unsalted SHA-256) - kept only to verify/upgrade old stored passwords
      */
-    private String hashPassword(String password) {
+    private String legacySha256Hex(String password) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(password.getBytes());
@@ -306,6 +327,54 @@ public class RemoteAuthManager {
         } catch (Exception e) {
             FLog.e(TAG, "Failed to load sessions from storage", e);
             activeSessions.clear();
+        }
+    }
+
+    // ---- PBKDF2 (salted, iterated) ----
+    private static final String PBKDF2_PREFIX = "pbkdf2$";
+    private static final int PBKDF2_ITERATIONS = 120_000;
+    private static final int PBKDF2_SALT_BYTES = 16;
+    private static final int PBKDF2_KEY_BITS = 256;
+
+    /** Format: pbkdf2$<alg>$<iterations>$<saltB64>$<hashB64>; alg "256" = HmacSHA256, "1" = HmacSHA1 (API < 26). */
+    private String hashPassword(String password) {
+        try {
+            byte[] salt = new byte[PBKDF2_SALT_BYTES];
+            new SecureRandom().nextBytes(salt);
+            String alg = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? "256" : "1";
+            byte[] dk = pbkdf2(password, salt, PBKDF2_ITERATIONS, alg);
+            return PBKDF2_PREFIX + alg + "$" + PBKDF2_ITERATIONS + "$"
+                    + Base64.encodeToString(salt, Base64.NO_WRAP) + "$"
+                    + Base64.encodeToString(dk, Base64.NO_WRAP);
+        } catch (GeneralSecurityException e) {
+            FLog.e(TAG, "PBKDF2 hashing failed", e);
+            return null;
+        }
+    }
+
+    private boolean verifyPbkdf2(String stored, String password) {
+        try {
+            String[] p = stored.split("\\$");
+            if (p.length != 5) return false;
+            int iterations = Integer.parseInt(p[2]);
+            byte[] salt = Base64.decode(p[3], Base64.NO_WRAP);
+            byte[] expected = Base64.decode(p[4], Base64.NO_WRAP);
+            byte[] actual = pbkdf2(password, salt, iterations, p[1]);
+            return MessageDigest.isEqual(expected, actual);
+        } catch (Exception e) {
+            FLog.e(TAG, "PBKDF2 verify failed", e);
+            return false;
+        }
+    }
+
+    private static byte[] pbkdf2(String password, byte[] salt, int iterations, String alg)
+            throws GeneralSecurityException {
+        String name = "256".equals(alg) ? "PBKDF2WithHmacSHA256" : "PBKDF2WithHmacSHA1";
+        PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, iterations, PBKDF2_KEY_BITS);
+        try {
+            return SecretKeyFactory.getInstance(name).generateSecret(spec).getEncoded();
+        } finally {
+            spec.clearPassword();
         }
     }
 }

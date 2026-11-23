@@ -1172,7 +1172,7 @@ FadCam 为录制使用分段式 MP4 格式。这意味着视频被保存为多�
     <string name="remote_security_auto_lock_desc">无操作后自动锁定</string>
     <string name="remote_security_logout_all">注销所有会话</string>
     <string name="remote_security_logout_all_desc">撤销所有活动的远程会话</string>
-    <string name="remote_security_password_required">密码必须为 4-32 个字符</string>
+    <string name="remote_security_password_required">密码必须为 8-32 个字符</string>
     <string name="remote_security_password_set">密码更新成功</string>
     <string name="remote_security_password_empty">请输入密码</string>
     <string name="remote_security_sessions_cleared">所有会话已注销</string>

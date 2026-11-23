@@ -2116,7 +2116,7 @@ Para la experiencia de reproducción más fluida, puedes usar un reproductor ext
     <string name="remote_security_auto_lock_desc">Bloquear automáticamente después de inactividad</string>
     <string name="remote_security_logout_all">Cerrar todas las sesiones</string>
     <string name="remote_security_logout_all_desc">Revocar todas las sesiones remotas activas</string>
-    <string name="remote_security_password_required">La contraseña debe tener 4-32 caracteres</string>
+    <string name="remote_security_password_required">La contraseña debe tener 8-32 caracteres</string>
     <string name="remote_security_password_set">Contraseña actualizada exitosamente</string>
     <string name="remote_security_password_empty">Por favor ingresa una contraseña</string>
     <string name="remote_security_sessions_cleared">Todas las sesiones cerradas</string>

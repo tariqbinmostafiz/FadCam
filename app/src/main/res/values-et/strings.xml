@@ -1994,7 +1994,7 @@ Sujuvama esitamise kogemuse jaoks saad kasutada välist esitajat nagu VLC. Siisk
     <string name="remote_security_auto_lock_desc">Lukusta automaatselt pärast tegevusetust</string>
     <string name="remote_security_logout_all">Logi välja kõik seansid</string>
     <string name="remote_security_logout_all_desc">Tühista kõik aktiivsed kaugseansid</string>
-    <string name="remote_security_password_required">Parool peab olema 4-32 märki</string>
+    <string name="remote_security_password_required">Parool peab olema 8-32 märki</string>
     <string name="remote_security_password_set">Parool edukalt uuendatud</string>
     <string name="remote_security_password_empty">Palun sisesta parool</string>
     <string name="remote_security_sessions_cleared">Kõik seansid välja logitud</string>

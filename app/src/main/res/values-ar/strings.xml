@@ -3376,7 +3376,7 @@
 
     <string name="remote_security_logout_all_desc">إلغاء جميع الجلسات عن بعد النشطة</string>
 
-    <string name="remote_security_password_required">يجب أن تكون كلمة المرور 4-32 حرفًا</string>
+    <string name="remote_security_password_required">يجب أن تكون كلمة المرور 8-32 حرفًا</string>
 
     <string name="remote_security_password_set">تم تحديث كلمة المرور بنجاح</string>
 

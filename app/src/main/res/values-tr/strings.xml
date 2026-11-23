@@ -895,7 +895,7 @@
     <string name="remote_security_auto_lock_desc">Hareketsizlikten sonra otomatik kilitlenir</string>
     <string name="remote_security_logout_all">Tüm Oturumları Kapat</string>
     <string name="remote_security_logout_all_desc">Tüm aktif uzaktan oturumları iptal et</string>
-    <string name="remote_security_password_required">Şifre 4-32 karakter arasında olmalıdır</string>
+    <string name="remote_security_password_required">Şifre 8-32 karakter arasında olmalıdır</string>
     <string name="remote_security_password_set">Şifre başarıyla güncellendi</string>
     <string name="remote_security_password_empty">Lütfen bir şifre girin</string>
     <string name="remote_security_sessions_cleared">Tüm oturumlar kapatıldı</string>

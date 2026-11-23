@@ -3313,7 +3313,7 @@ For the smoothest playback experience, you can use an external player like VLC. 
 
 <string name="remote_security_logout_all_desc">Revoke all active remote sessions</string>
 
-<string name="remote_security_password_required">Password must be 4-32 characters</string>
+<string name="remote_security_password_required">Password must be 8-32 characters</string>
 
 <string name="remote_security_password_set">Password updated successfully</string>
 

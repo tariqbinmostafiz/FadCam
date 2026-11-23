@@ -2172,7 +2172,7 @@ Apakah Anda ingin beralih ke H.264 dan mulai merekam?</string>
     <string name="remote_security_auto_lock_desc">Kunci otomatis setelah tidak aktif</string>
     <string name="remote_security_logout_all">Keluarkan Semua Sesi</string>
     <string name="remote_security_logout_all_desc">Cabut semua sesi jarak jauh yang aktif</string>
-    <string name="remote_security_password_required">Kata sandi harus 4-32 karakter</string>
+    <string name="remote_security_password_required">Kata sandi harus 8-32 karakter</string>
     <string name="remote_security_password_set">Kata sandi berhasil diperbarui</string>
     <string name="remote_security_password_empty">Harap masukkan kata sandi</string>
     <string name="remote_security_sessions_cleared">Semua sesi telah dikeluarkan</string>

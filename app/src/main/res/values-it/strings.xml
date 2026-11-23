@@ -1943,7 +1943,7 @@
     <string name="remote_security_auto_lock_desc">Blocco automatico dopo inattività</string>
     <string name="remote_security_logout_all">Esci da tutto</string>
     <string name="remote_security_logout_all_desc">Revoca sessioni attive</string>
-    <string name="remote_security_password_required">Password 4-32 caratteri</string>
+    <string name="remote_security_password_required">Password 8-32 caratteri</string>
     <string name="remote_security_password_set">Password aggiornata</string>
     <string name="remote_security_password_empty">Nessuna password impostata</string>
     <string name="remote_security_sessions_cleared">Sessioni revocate</string>

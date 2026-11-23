@@ -1405,7 +1405,7 @@ FadCam использует фрагментированный формат MP4 
     <string name="remote_security_auto_lock_desc">Автоматически блокировать после бездействия</string>
     <string name="remote_security_logout_all">Выйти из всех сессий</string>
     <string name="remote_security_logout_all_desc">Отозвать все активные удалённые сессии</string>
-    <string name="remote_security_password_required">Пароль должен быть 4-32 символа</string>
+    <string name="remote_security_password_required">Пароль должен быть 8-32 символа</string>
     <string name="remote_security_password_set">Пароль успешно обновлён</string>
     <string name="remote_security_password_empty">Пожалуйста, введите пароль</string>
     <string name="remote_security_sessions_cleared">Все сессии завершены</string>

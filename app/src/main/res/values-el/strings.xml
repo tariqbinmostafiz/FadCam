@@ -2057,7 +2057,7 @@ Fun fact: 10/Ιουλ/2024 04:47 ΜΜ είναι όταν κυκλοφόρησε
     <string name="remote_security_auto_lock_desc">Αυτόματο κλείδωμα μετά από αδράνεια</string>
     <string name="remote_security_logout_all">Αποσύνδεση Όλων των Συνεδριών</string>
     <string name="remote_security_logout_all_desc">Ανάκληση όλων των ενεργών απομακρυσμένων συνεδριών</string>
-    <string name="remote_security_password_required">Ο κωδικός πρόσβασης πρέπει να είναι 4-32 χαρακτήρες</string>
+    <string name="remote_security_password_required">Ο κωδικός πρόσβασης πρέπει να είναι 8-32 χαρακτήρες</string>
     <string name="remote_security_password_set">Ο κωδικός πρόσβασης ενημερώθηκε επιτυχώς</string>
     <string name="remote_security_password_empty">Παρακαλούμε εισαγάγετε έναν κωδικό πρόσβασης</string>
     <string name="remote_security_sessions_cleared">Όλες οι συνεδρίες αποσυνδέθηκαν</string>

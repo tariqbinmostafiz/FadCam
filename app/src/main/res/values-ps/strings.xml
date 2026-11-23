@@ -1750,7 +1750,7 @@ Yadona: La na yao exit method faal pati shi che bended na shi!</string>
     <string name="remote_security_password_desc">Change sta / khpal remote access password</string>
     <string name="remote_security_password_empty">Please enter a password</string>
     <string name="remote_security_password_hint">Enter new password</string>
-    <string name="remote_security_password_required">Password must be 4-32 characters</string>
+    <string name="remote_security_password_required">Password must be 8-32 characters</string>
     <string name="remote_security_password_set">Password updated successfully</string>
     <string name="remote_security_sessions_cleared">All sessions logged out</string>
     <string name="remote_security_title">Lirai Amniyat</string>

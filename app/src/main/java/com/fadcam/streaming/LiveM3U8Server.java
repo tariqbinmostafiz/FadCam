@@ -40,6 +40,8 @@ import fi.iki.elonen.NanoHTTPD;
  */
     public class LiveM3U8Server extends NanoHTTPD {
         private static final String TAG = "LiveM3U8Server";
+        private static final com.fadcam.streaming.util.LoginRateLimiter LOGIN_LIMITER =
+                new com.fadcam.streaming.util.LoginRateLimiter();
         
         private final RemoteStreamManager streamManager;
         private final android.content.Context context;
@@ -1340,6 +1342,22 @@ import fi.iki.elonen.NanoHTTPD;
                 return jsonResponse(Response.Status.OK, authResponse.toJson());
             }
             
+            // Brute-force protection: per-IP lockout with exponential back-off
+            long lockedMs = LOGIN_LIMITER.remainingLockMs(clientIP);
+            if (lockedMs > 0) {
+                long secs = (lockedMs + 999) / 1000;
+                FLog.w(TAG, "Login blocked for " + clientIP + " (" + secs + "s left)");
+                com.fadcam.streaming.model.AuthResponse locked =
+                    com.fadcam.streaming.model.AuthResponse.failure("Too many attempts. Try again in " + secs + "s");
+                Response tooMany = newFixedLengthResponse(new Response.IStatus() {
+                    @Override public String getDescription() { return "429 Too Many Requests"; }
+                    @Override public int getRequestStatus() { return 429; }
+                }, "application/json; charset=utf-8", locked.toJson());
+                tooMany.addHeader("Retry-After", String.valueOf(secs));
+                tooMany.addHeader("Cache-Control", "no-cache");
+                return tooMany;
+            }
+
             // Parse JSON body
             java.util.Map<String, String> files = new java.util.HashMap<>();
             session.parseBody(files);
@@ -1369,12 +1387,14 @@ import fi.iki.elonen.NanoHTTPD;
             
             // Verify password
             if (!authManager.verifyPassword(password)) {
+                LOGIN_LIMITER.onFailure(clientIP);
                 FLog.w(TAG, "Invalid login attempt from " + clientIP + " (password mismatch)");
                 com.fadcam.streaming.model.AuthResponse authResponse = 
                     com.fadcam.streaming.model.AuthResponse.invalidCredentials();
                 return jsonResponse(Response.Status.UNAUTHORIZED, authResponse.toJson());
             }
             
+            LOGIN_LIMITER.onSuccess(clientIP);
             // Create session
             String userAgent = session.getHeaders().get("user-agent");
             String deviceInfo = clientIP + " - " + (userAgent != null ? userAgent : "unknown");

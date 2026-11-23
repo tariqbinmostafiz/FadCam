@@ -2173,7 +2173,7 @@ For the smoothest playback experience, you can use an external player like VLC. 
     <string name="remote_security_auto_lock_desc">Automatically lock after inactivity</string>
     <string name="remote_security_logout_all">Logout All Sessions</string>
     <string name="remote_security_logout_all_desc">Revoke all active remote sessions</string>
-    <string name="remote_security_password_required">Password must be 4-32 characters</string>
+    <string name="remote_security_password_required">Password must be 8-32 characters</string>
     <string name="remote_security_password_set">Password updated successfully</string>
     <string name="remote_security_password_empty">Please enter a password</string>
     <string name="remote_security_sessions_cleared">All sessions logged out</string>
