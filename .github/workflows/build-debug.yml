@@ -59,6 +59,21 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # কোন ডিপেন্ডেন্সি resolve হচ্ছে না সেটা সরাসরি দেখায় (FAILED / Could not ... লাইন)
+      - name: Diagnose dependencies (on failure)
+        if: failure()
+        continue-on-error: true
+        shell: bash
+        run: |
+          ./gradlew :app:dependencies --configuration defaultDebugRuntimeClasspath \
+            --no-watch-fs --no-configuration-cache > deps.log 2>&1 || true
+          {
+            echo '### Dependency problems'
+            echo '```'
+            grep -n -B2 -A4 -E "FAILED|Could not|UNRESOLVED|No matching|What went wrong" deps.log | head -120
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: List built APKs
         run: ls -lh app/build/outputs/apk/default/debug/
 
@@ -77,4 +92,5 @@ jobs:
           name: build-log
           path: |
             build.log
+            deps.log
             app/build/reports/**
