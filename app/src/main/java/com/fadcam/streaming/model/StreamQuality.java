@@ -12,7 +12,9 @@ public class StreamQuality {
         LOW("Low",    15,  1_000_000, "1 Mbps • max 15fps — Poor / slow connections"),
         MEDIUM("Medium", 24, 2_500_000, "2.5 Mbps • max 24fps — Balanced quality"),
         HIGH("High",  30,  5_000_000, "5 Mbps • max 30fps — HD quality (default)"),
-        ULTRA("Ultra", 30, 8_000_000, "8 Mbps • max 30fps — Maximum quality, fast networks");
+        ULTRA("Ultra", 30, 8_000_000, "8 Mbps • max 30fps — Maximum quality, fast networks"),
+        // CUSTOM: real values come from StreamCustomSettings (bitrate, fps cap, optional resolution).
+        CUSTOM("Custom", 30, 5_000_000, "Manual — you set bitrate, FPS and resolution");
         
         private final String displayName;
         private final int fps;

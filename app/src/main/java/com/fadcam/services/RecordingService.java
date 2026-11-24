@@ -7209,6 +7209,15 @@ public class RecordingService extends Service {
             // Resolution always from Recording Settings — presets only control bitrate + FPS
             String orientation = sharedPreferencesManager.getVideoOrientation();
             Size resolution = sharedPreferencesManager.getCameraResolution();
+            // Custom stream preset may override the encoded resolution (camera capture is unchanged;
+            // the GL pipeline scales). 0x0 = keep Recording Settings resolution.
+            if (isStreamingActive && "CUSTOM".equals(fadcamPrefs.getString("quality_preset", "HIGH"))) {
+                int customW = fadcamPrefs.getInt(com.fadcam.streaming.StreamCustomSettings.KEY_WIDTH, 0);
+                int customH = fadcamPrefs.getInt(com.fadcam.streaming.StreamCustomSettings.KEY_HEIGHT, 0);
+                if (customW > 0 && customH > 0) {
+                    resolution = new Size(customW, customH);
+                }
+            }
             int videoWidth  = resolution.getWidth();
             int videoHeight = resolution.getHeight();
             

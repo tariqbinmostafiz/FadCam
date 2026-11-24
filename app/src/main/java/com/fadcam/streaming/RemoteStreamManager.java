@@ -1688,8 +1688,13 @@ public class RemoteStreamManager {
         // Store bitrate and FPS cap in SharedPreferences (resolution comes from Recording Settings)
         android.content.SharedPreferences prefs = context.getSharedPreferences("FadCamPrefs", android.content.Context.MODE_PRIVATE);
         android.content.SharedPreferences.Editor editor = prefs.edit();
-        editor.putInt("stream_bitrate", preset.getBitrate());
-        editor.putInt("stream_fps_cap", preset.getFps());
+        if (preset == StreamQuality.Preset.CUSTOM) {
+            editor.putInt("stream_bitrate", StreamCustomSettings.getBitrateBps(context));
+            editor.putInt("stream_fps_cap", StreamCustomSettings.getFps(context));
+        } else {
+            editor.putInt("stream_bitrate", preset.getBitrate());
+            editor.putInt("stream_fps_cap", preset.getFps());
+        }
         editor.putString("quality_preset", preset.name());
         editor.apply();
         FLog.i(TAG, "[STREAM PRESET] Set: " + preset.getDisplayName()

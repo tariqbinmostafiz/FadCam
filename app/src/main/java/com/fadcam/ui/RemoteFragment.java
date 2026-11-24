@@ -855,11 +855,13 @@ public class RemoteFragment extends BaseFragment {
         
         // Format: "High • 30fps cap • 5 Mbps"
         // (Resolution comes from normal recording settings)
-        String displayText = String.format("%s • %dfps cap • %s",
-            preset.getDisplayName(),
-            preset.getFps(),
-            preset.getBitrateString()
-        );
+        String displayText = (preset == StreamQuality.Preset.CUSTOM)
+            ? preset.getDisplayName() + " \u2022 " + com.fadcam.streaming.StreamCustomSettings.summary(requireContext())
+            : String.format("%s • %dfps cap • %s",
+                preset.getDisplayName(),
+                preset.getFps(),
+                preset.getBitrateString()
+            );
         
         fpsResolutionText.setText(displayText);
     }

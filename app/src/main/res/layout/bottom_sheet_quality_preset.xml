@@ -220,6 +220,55 @@
             android:visibility="gone" />
     </LinearLayout>
 
+    <!-- CUSTOM -->
+    <LinearLayout
+        android:id="@+id/rowCustom"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/settings_home_row_bg"
+        android:paddingStart="14dp"
+        android:paddingEnd="12dp"
+        android:paddingVertical="12dp"
+        android:layout_marginBottom="12dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:nextFocusUp="@+id/rowUltra">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/remote_quality_custom"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorHeading" />
+
+            <TextView
+                android:id="@+id/textCustomSummary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/remote_quality_custom_desc"
+                android:textSize="12sp"
+                android:textColor="@android:color/darker_gray"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/checkCustom"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_check"
+            android:tint="?attr/colorHeading"
+            android:visibility="gone" />
+    </LinearLayout>
+
     <!-- Info Note -->
     <TextView
         android:layout_width="match_parent"

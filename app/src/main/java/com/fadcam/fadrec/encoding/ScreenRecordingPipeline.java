@@ -1067,7 +1067,9 @@ public class ScreenRecordingPipeline {
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
             
             ByteBuffer audioBuffer = ByteBuffer.allocateDirect(16384);
-            ByteBuffer systemBuffer = ByteBuffer.allocateDirect(16384);
+            // "Both": small mic chunks keep the mix tight and start the device-audio thread
+            final int readSize = systemAudioRecord != null ? 4096 : audioBuffer.capacity();
+            startSystemAudioCapture();
             long readCount = 0;
             
             while (isRecording && !isStopped) {
@@ -1081,7 +1083,7 @@ public class ScreenRecordingPipeline {
                 }
                 
                 audioBuffer.clear();
-                int bytesRead = audioRecord.read(audioBuffer, audioBuffer.capacity());
+                int bytesRead = audioRecord.read(audioBuffer, readSize);
                 
                 if (bytesRead > 0) {
                     readCount++;
@@ -1098,7 +1100,7 @@ public class ScreenRecordingPipeline {
                                 + " droppedMuxerWindow=" + audioSamplesDroppedDuringRollover);
                     }
                     // "Both": mix device audio into the mic chunk (non-blocking read)
-                    mixSystemAudioInto(audioBuffer, bytesRead, systemBuffer);
+                    mixSystemAudioInto(audioBuffer, bytesRead);
                     if (audioMuted) {
                         zeroAudioBuffer(audioBuffer, bytesRead);
                     }
@@ -1119,26 +1121,124 @@ public class ScreenRecordingPipeline {
         audioRecordingThread.start();
     }
 
+    /** Thread-safe byte FIFO that decouples the device-audio capture thread from the mic loop. */
+    private static final class ByteFifo {
+        private final byte[] buf;
+        private int head = 0;
+        private int size = 0;
+
+        ByteFifo(int capacity) {
+            buf = new byte[capacity];
+        }
+
+        synchronized void write(byte[] src, int off, int len) {
+            if (len > buf.length) {
+                off += len - buf.length;
+                len = buf.length;
+            }
+            int overflow = size + len - buf.length;
+            if (overflow > 0) { // drop oldest samples (keep 16-bit alignment)
+                overflow += overflow & 1;
+                head = (head + overflow) % buf.length;
+                size -= overflow;
+            }
+            int tail = (head + size) % buf.length;
+            int first = Math.min(len, buf.length - tail);
+            System.arraycopy(src, off, buf, tail, first);
+            if (len > first) System.arraycopy(src, off + first, buf, 0, len - first);
+            size += len;
+        }
+
+        synchronized int read(byte[] dst, int off, int len) {
+            int n = Math.min(len, size);
+            int first = Math.min(n, buf.length - head);
+            System.arraycopy(buf, head, dst, off, first);
+            if (n > first) System.arraycopy(buf, 0, dst, off + first, n - first);
+            head = (head + n) % buf.length;
+            size -= n;
+            return n;
+        }
+
+        synchronized void discard(int len) {
+            int n = Math.min(len + (len & 1), size);
+            head = (head + n) % buf.length;
+            size -= n;
+        }
+
+        synchronized int available() {
+            return size;
+        }
+
+        synchronized void clear() {
+            head = 0;
+            size = 0;
+        }
+    }
+
+    private volatile ByteFifo systemFifo;
+    private boolean systemPrimed = false;
+    private final byte[] systemMixScratch = new byte[16384];
+    private Thread systemAudioThread;
+
+    /** Reads device audio continuously (blocking) into the FIFO so the mic loop never waits on it. */
+    private void startSystemAudioCapture() {
+        final AudioRecord rec = systemAudioRecord;
+        if (rec == null) return;
+        final ByteFifo fifo = new ByteFifo(65536);
+        systemFifo = fifo;
+        systemPrimed = false;
+        systemAudioThread = new Thread(() -> {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
+            byte[] tmp = new byte[2048];
+            while (isRecording && !isStopped) {
+                int n;
+                try {
+                    n = rec.read(tmp, 0, tmp.length); // blocking
+                } catch (Exception e) {
+                    break;
+                }
+                if (n < 0) break;
+                if (n == 0) continue;
+                if (isPaused) { // discard while paused so stale audio is not replayed on resume
+                    fifo.clear();
+                    continue;
+                }
+                fifo.write(tmp, 0, n);
+            }
+        }, "ScreenSystemAudio");
+        systemAudioThread.start();
+    }
+
     /**
-     * Adds the latest available device-audio samples to the mic chunk (16-bit little-endian
-     * PCM, saturating sum). Uses a non-blocking read so it never stalls the mic loop; if no
-     * device audio is available the chunk stays mic-only.
+     * Mixes buffered device audio into the mic chunk (16-bit little-endian PCM). Device audio comes
+     * from a FIFO fed by its own thread, so jitter and partial reads cannot punch holes in the
+     * stream. Latency is capped (~85 ms) and a small headroom gain avoids hard clipping.
      */
-    private void mixSystemAudioInto(ByteBuffer mic, int micBytes, ByteBuffer system) {
-        AudioRecord sysRec = systemAudioRecord;
-        if (sysRec == null) return;
+    private void mixSystemAudioInto(ByteBuffer mic, int micBytes) {
+        ByteFifo fifo = systemFifo;
+        if (fifo == null) return;
         try {
-            system.clear();
-            int want = Math.min(micBytes, system.capacity()) & ~1;
-            if (want <= 0) return;
-            int got = sysRec.read(system, want, AudioRecord.READ_NON_BLOCKING);
+            int need = micBytes & ~1;
+            if (need <= 0) return;
+            int avail = fifo.available();
+            int maxKeep = need + 8192;
+            if (avail > maxKeep) { // too far behind real time: skip ahead
+                fifo.discard(avail - maxKeep);
+                avail = fifo.available();
+            }
+            if (!systemPrimed) {
+                if (avail < need) return; // wait for a full chunk before starting to mix
+                systemPrimed = true;
+            }
+            int got = fifo.read(systemMixScratch, 0, Math.min(need, systemMixScratch.length));
+            if (got < need) systemPrimed = false; // underrun: refill before mixing again
             if (got <= 0) return;
             ByteBuffer m = mic.duplicate().order(java.nio.ByteOrder.LITTLE_ENDIAN);
-            ByteBuffer s = system.duplicate().order(java.nio.ByteOrder.LITTLE_ENDIAN);
+            ByteBuffer s = ByteBuffer.wrap(systemMixScratch, 0, got).order(java.nio.ByteOrder.LITTLE_ENDIAN);
             int samples = got / 2;
             for (int i = 0; i < samples; i++) {
                 int idx = i * 2;
-                int mixed = m.getShort(idx) + s.getShort(idx);
+                float mixed = (m.getShort(idx) + s.getShort(idx)) * 0.9f;
                 if (mixed > Short.MAX_VALUE) mixed = Short.MAX_VALUE;
                 else if (mixed < Short.MIN_VALUE) mixed = Short.MIN_VALUE;
                 m.putShort(idx, (short) mixed);

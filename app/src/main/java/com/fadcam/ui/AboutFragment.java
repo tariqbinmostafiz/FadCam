@@ -313,6 +313,11 @@ public class AboutFragment extends BaseFragment {
             bottomSheet.show(getParentFragmentManager(), "KoFiSupportBottomSheet");
         });
         checkUpdatesButton.setOnClickListener(v -> checkForUpdates());
+        View noteFromDeveloper = view.findViewById(R.id.note_from_developer_button);
+        if (noteFromDeveloper != null) {
+            noteFromDeveloper.setOnClickListener(v ->
+                    new ReadmeBottomSheetFragment().show(getChildFragmentManager(), "readme"));
+        }
         emailText.setOnClickListener(v -> sendEmail());
         discordText.setOnClickListener(v -> openUrl("https://discord.gg/kvAZvdkuuN"));
         setupPrivacyInfo(privacyInfoCard, scrollView);

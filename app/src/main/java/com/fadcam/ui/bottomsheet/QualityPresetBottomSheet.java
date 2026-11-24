@@ -4,7 +4,12 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.text.InputType;
+import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
@@ -13,7 +18,9 @@ import androidx.annotation.Nullable;
 
 import com.fadcam.R;
 import com.fadcam.streaming.RemoteStreamManager;
+import com.fadcam.streaming.StreamCustomSettings;
 import com.fadcam.streaming.model.StreamQuality;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
 /**
@@ -22,8 +29,9 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
  */
 public class QualityPresetBottomSheet extends BottomSheetDialogFragment {
     
-    private LinearLayout rowLow, rowMedium, rowHigh, rowUltra;
-    private ImageView checkLow, checkMedium, checkHigh, checkUltra;
+    private LinearLayout rowLow, rowMedium, rowHigh, rowUltra, rowCustom;
+    private ImageView checkLow, checkMedium, checkHigh, checkUltra, checkCustom;
+    private TextView textCustomSummary;
     
     private StreamQuality.Preset currentPreset;
     private StreamQuality.Preset selectedPreset;
@@ -84,6 +92,12 @@ public class QualityPresetBottomSheet extends BottomSheetDialogFragment {
         checkMedium = view.findViewById(R.id.checkMedium);
         checkHigh = view.findViewById(R.id.checkHigh);
         checkUltra = view.findViewById(R.id.checkUltra);
+        rowCustom = view.findViewById(R.id.rowCustom);
+        checkCustom = view.findViewById(R.id.checkCustom);
+        textCustomSummary = view.findViewById(R.id.textCustomSummary);
+        if (textCustomSummary != null) {
+            textCustomSummary.setText(StreamCustomSettings.summary(requireContext()));
+        }
         
         // Show current selection
         updateSelection();
@@ -93,6 +107,9 @@ public class QualityPresetBottomSheet extends BottomSheetDialogFragment {
         rowMedium.setOnClickListener(v -> selectPreset(StreamQuality.Preset.MEDIUM));
         rowHigh.setOnClickListener(v -> selectPreset(StreamQuality.Preset.HIGH));
         rowUltra.setOnClickListener(v -> selectPreset(StreamQuality.Preset.ULTRA));
+        if (rowCustom != null) {
+            rowCustom.setOnClickListener(v -> showCustomDialog());
+        }
     }
     
     private void selectPreset(StreamQuality.Preset preset) {
@@ -129,12 +146,90 @@ public class QualityPresetBottomSheet extends BottomSheetDialogFragment {
         dismiss();
     }
     
+    /** Manual stream settings: resolution, FPS cap and bitrate. */
+    private void showCustomDialog() {
+        final android.content.Context ctx = requireContext();
+        final float density = ctx.getResources().getDisplayMetrics().density;
+        final int pad = (int) (20 * density);
+
+        LinearLayout box = new LinearLayout(ctx);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(pad, pad / 2, pad, 0);
+
+        TextView resLabel = new TextView(ctx);
+        resLabel.setText("Resolution");
+        box.addView(resLabel);
+        final String[] resNames = {"Same as recording", "640x360", "854x480", "1280x720", "1920x1080"};
+        final int[][] resValues = {{0, 0}, {640, 360}, {854, 480}, {1280, 720}, {1920, 1080}};
+        final Spinner resSpinner = new Spinner(ctx);
+        resSpinner.setAdapter(new ArrayAdapter<>(ctx, android.R.layout.simple_spinner_dropdown_item, resNames));
+        int curW = StreamCustomSettings.getWidth(ctx);
+        int curH = StreamCustomSettings.getHeight(ctx);
+        for (int i = 0; i < resValues.length; i++) {
+            if (resValues[i][0] == curW && resValues[i][1] == curH) {
+                resSpinner.setSelection(i);
+                break;
+            }
+        }
+        box.addView(resSpinner);
+
+        TextView fpsLabel = new TextView(ctx);
+        fpsLabel.setText("FPS cap (" + StreamCustomSettings.MIN_FPS + "-" + StreamCustomSettings.MAX_FPS + ")");
+        fpsLabel.setPadding(0, pad / 2, 0, 0);
+        box.addView(fpsLabel);
+        final EditText fpsInput = new EditText(ctx);
+        fpsInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+        fpsInput.setText(String.valueOf(StreamCustomSettings.getFps(ctx)));
+        box.addView(fpsInput);
+
+        TextView brLabel = new TextView(ctx);
+        brLabel.setText("Bitrate in kbps (" + StreamCustomSettings.MIN_BITRATE_KBPS + "-"
+                + StreamCustomSettings.MAX_BITRATE_KBPS + ")");
+        brLabel.setPadding(0, pad / 2, 0, 0);
+        box.addView(brLabel);
+        final EditText bitrateInput = new EditText(ctx);
+        bitrateInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+        bitrateInput.setText(String.valueOf(StreamCustomSettings.getBitrateBps(ctx) / 1000));
+        box.addView(bitrateInput);
+
+        new MaterialAlertDialogBuilder(ctx)
+                .setTitle(R.string.stream_custom_title)
+                .setView(box)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    int fps;
+                    int kbps;
+                    try {
+                        fps = Integer.parseInt(fpsInput.getText().toString().trim());
+                        kbps = Integer.parseInt(bitrateInput.getText().toString().trim());
+                    } catch (NumberFormatException e) {
+                        Toast.makeText(ctx, "Enter valid numbers", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    if (fps < StreamCustomSettings.MIN_FPS || fps > StreamCustomSettings.MAX_FPS
+                            || kbps < StreamCustomSettings.MIN_BITRATE_KBPS
+                            || kbps > StreamCustomSettings.MAX_BITRATE_KBPS) {
+                        Toast.makeText(ctx, "Value out of range", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    int[] res = resValues[Math.max(0, resSpinner.getSelectedItemPosition())];
+                    StreamCustomSettings.save(ctx, kbps, fps, res[0], res[1]);
+                    RemoteStreamManager.getInstance().setStreamQuality(StreamQuality.Preset.CUSTOM, ctx);
+                    if (listener != null) listener.onQualitySelected(StreamQuality.Preset.CUSTOM);
+                    Toast.makeText(ctx, "Custom stream settings saved. Restart recording to apply.",
+                            Toast.LENGTH_LONG).show();
+                    dismiss();
+                })
+                .show();
+    }
+
     private void updateSelection() {
         // Hide all checkmarks
         checkLow.setVisibility(View.GONE);
         checkMedium.setVisibility(View.GONE);
         checkHigh.setVisibility(View.GONE);
         checkUltra.setVisibility(View.GONE);
+        if (checkCustom != null) checkCustom.setVisibility(View.GONE);
         
         // Show selected checkmark
         switch (selectedPreset) {
@@ -149,6 +244,9 @@ public class QualityPresetBottomSheet extends BottomSheetDialogFragment {
                 break;
             case ULTRA:
                 checkUltra.setVisibility(View.VISIBLE);
+                break;
+            case CUSTOM:
+                if (checkCustom != null) checkCustom.setVisibility(View.VISIBLE);
                 break;
         }
     }
