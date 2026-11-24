@@ -312,7 +312,6 @@ public class SettingsHomeFragment extends Fragment {
         addViewAnim(viewAnims, groupAudioQuick, showAudio);
         addViewAnim(viewAnims, dividerAfterAudio, showAudio);
         addViewAnim(viewAnims, groupWatermarkFrame, showWatermark);
-        addViewAnim(viewAnims, groupWatermarkBadge, showWatermark);
         addViewAnim(viewAnims, dividerAfterWatermark, showWatermark);
         addViewAnim(viewAnims, groupScreenRecording, showScreenRec);
         addViewAnim(viewAnims, dividerBeforeScreenRec, showScreenRec);
@@ -402,6 +401,8 @@ public class SettingsHomeFragment extends Fragment {
             groupWatermarkFrame = (View) watermarkRow.getParent();
         }
         groupWatermarkBadge = root.findViewById(R.id.watermark_new_badge);
+        // The watermark settings screen is fully functional - hide the misleading "Coming Soon" badge.
+        if (groupWatermarkBadge != null) groupWatermarkBadge.setVisibility(View.GONE);
 
         groupScreenRecording = root.findViewById(R.id.group_screen_recording);
 

@@ -172,6 +172,8 @@ public class ScreenRecordingPipeline {
 
     // Audio recording components
     private AudioRecord audioRecord;
+    /** Device-audio capture used only for AUDIO_SOURCE_BOTH (mixed into the mic stream). */
+    private AudioRecord systemAudioRecord;
     private MediaCodec audioEncoder;
     private int audioTrackIndex = -1;
     private Thread audioRecordingThread;
@@ -745,6 +747,42 @@ public class ScreenRecordingPipeline {
             if (audioRecord.getState() != AudioRecord.STATE_INITIALIZED) {
                 throw new IOException("AudioRecord not initialized - source: " + audioSource);
             }
+            // "Both": add device-audio capture next to the mic. If it cannot be built the
+            // recording continues with mic only (never fails the whole recording).
+            if (Constants.AUDIO_SOURCE_BOTH.equals(audioSource)
+                    && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+                    && mediaProjection != null) {
+                try {
+                    AudioPlaybackCaptureConfiguration bothConfig =
+                        new AudioPlaybackCaptureConfiguration.Builder(mediaProjection)
+                            .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
+                            .addMatchingUsage(AudioAttributes.USAGE_GAME)
+                            .addMatchingUsage(AudioAttributes.USAGE_UNKNOWN)
+                            .build();
+                    systemAudioRecord = new AudioRecord.Builder()
+                        .setAudioPlaybackCaptureConfig(bothConfig)
+                        .setAudioFormat(new AudioFormat.Builder()
+                            .setEncoding(audioFormat)
+                            .setSampleRate(sampleRate)
+                            .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
+                            .build())
+                        .setBufferSizeInBytes(bufferSize)
+                        .build();
+                    if (systemAudioRecord.getState() != AudioRecord.STATE_INITIALIZED) {
+                        FLog.w(TAG, "FadRec Both: device-audio capture not initialized - mic only");
+                        systemAudioRecord.release();
+                        systemAudioRecord = null;
+                    } else {
+                        FLog.i(TAG, "FadRec Both: mic + device audio capture ready");
+                    }
+                } catch (Exception e) {
+                    FLog.w(TAG, "FadRec Both: device-audio capture failed - mic only", e);
+                    if (systemAudioRecord != null) {
+                        try { systemAudioRecord.release(); } catch (Exception ignored) { }
+                        systemAudioRecord = null;
+                    }
+                }
+            }
             // Diagnostics: capture-session baseline — routing, buffering and
             // mute state at init, so silent recordings can be traced to the
             // capture, the mute path or the encoder.
@@ -826,6 +864,15 @@ public class ScreenRecordingPipeline {
         if (enableAudio && audioEncoder != null) {
             audioEncoder.start();
             audioRecord.startRecording();
+            if (systemAudioRecord != null) {
+                try {
+                    systemAudioRecord.startRecording();
+                } catch (Exception e) {
+                    FLog.w(TAG, "FadRec Both: device-audio start failed - mic only", e);
+                    try { systemAudioRecord.release(); } catch (Exception ignored) { }
+                    systemAudioRecord = null;
+                }
+            }
         }
         
         // Create VirtualDisplay
@@ -1020,6 +1067,7 @@ public class ScreenRecordingPipeline {
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
             
             ByteBuffer audioBuffer = ByteBuffer.allocateDirect(16384);
+            ByteBuffer systemBuffer = ByteBuffer.allocateDirect(16384);
             long readCount = 0;
             
             while (isRecording && !isStopped) {
@@ -1049,6 +1097,8 @@ public class ScreenRecordingPipeline {
                                 + " droppedInput=" + audioChunksDropped
                                 + " droppedMuxerWindow=" + audioSamplesDroppedDuringRollover);
                     }
+                    // "Both": mix device audio into the mic chunk (non-blocking read)
+                    mixSystemAudioInto(audioBuffer, bytesRead, systemBuffer);
                     if (audioMuted) {
                         zeroAudioBuffer(audioBuffer, bytesRead);
                     }
@@ -1067,6 +1117,35 @@ public class ScreenRecordingPipeline {
                     + " droppedMuxerWindow=" + audioSamplesDroppedDuringRollover);
         });
         audioRecordingThread.start();
+    }
+
+    /**
+     * Adds the latest available device-audio samples to the mic chunk (16-bit little-endian
+     * PCM, saturating sum). Uses a non-blocking read so it never stalls the mic loop; if no
+     * device audio is available the chunk stays mic-only.
+     */
+    private void mixSystemAudioInto(ByteBuffer mic, int micBytes, ByteBuffer system) {
+        AudioRecord sysRec = systemAudioRecord;
+        if (sysRec == null) return;
+        try {
+            system.clear();
+            int want = Math.min(micBytes, system.capacity()) & ~1;
+            if (want <= 0) return;
+            int got = sysRec.read(system, want, AudioRecord.READ_NON_BLOCKING);
+            if (got <= 0) return;
+            ByteBuffer m = mic.duplicate().order(java.nio.ByteOrder.LITTLE_ENDIAN);
+            ByteBuffer s = system.duplicate().order(java.nio.ByteOrder.LITTLE_ENDIAN);
+            int samples = got / 2;
+            for (int i = 0; i < samples; i++) {
+                int idx = i * 2;
+                int mixed = m.getShort(idx) + s.getShort(idx);
+                if (mixed > Short.MAX_VALUE) mixed = Short.MAX_VALUE;
+                else if (mixed < Short.MIN_VALUE) mixed = Short.MIN_VALUE;
+                m.putShort(idx, (short) mixed);
+            }
+        } catch (Exception e) {
+            FLog.w(TAG, "FadRec Both: mixing failed - continuing with mic only", e);
+        }
     }
 
     /** Lightweight RMS of the first 512 samples — detects zero-capture immediately. */
@@ -1539,6 +1618,13 @@ public class ScreenRecordingPipeline {
                 FLog.e(TAG, "Error stopping AudioRecord", e);
             }
         }
+        if (systemAudioRecord != null) {
+            try {
+                systemAudioRecord.stop();
+            } catch (Exception e) {
+                FLog.e(TAG, "Error stopping device-audio AudioRecord", e);
+            }
+        }
         
         // Drain encoders with EOS
         drainVideoEncoder(true);
@@ -1612,6 +1698,14 @@ public class ScreenRecordingPipeline {
                 FLog.e(TAG, "Error releasing AudioRecord", e);
             }
             audioRecord = null;
+        }
+        if (systemAudioRecord != null) {
+            try {
+                systemAudioRecord.release();
+            } catch (Exception e) {
+                FLog.e(TAG, "Error releasing device-audio AudioRecord", e);
+            }
+            systemAudioRecord = null;
         }
         
         // Release muxer

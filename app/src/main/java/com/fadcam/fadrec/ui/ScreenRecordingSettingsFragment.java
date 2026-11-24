@@ -143,6 +143,8 @@ public class ScreenRecordingSettingsFragment extends Fragment {
                 valueAudioSource.setText(getString(R.string.fadrec_audio_source_none));
             } else if (Constants.AUDIO_SOURCE_INTERNAL.equals(audio)) {
                 valueAudioSource.setText(getString(R.string.fadrec_audio_source_internal));
+            } else if (Constants.AUDIO_SOURCE_BOTH.equals(audio)) {
+                valueAudioSource.setText(getString(R.string.fadrec_audio_source_both));
             } else {
                 valueAudioSource.setText(getString(R.string.fadrec_audio_source_mic));
             }
@@ -341,6 +343,9 @@ public class ScreenRecordingSettingsFragment extends Fragment {
         items.add(new OptionItem(Constants.AUDIO_SOURCE_INTERNAL,
                 getString(R.string.fadrec_audio_source_internal),
                 "Record internal device audio (Android 10+)"));
+        items.add(new OptionItem(Constants.AUDIO_SOURCE_BOTH,
+                getString(R.string.fadrec_audio_source_both),
+                "Mix microphone and device audio together (device audio needs Android 10+)"));
         items.add(new OptionItem(Constants.AUDIO_SOURCE_NONE,
                 getString(R.string.fadrec_audio_source_none),
                 "No audio will be recorded"));

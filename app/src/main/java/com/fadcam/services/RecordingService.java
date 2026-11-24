@@ -6664,6 +6664,20 @@ public class RecordingService extends Service {
                             }
                         }
                     }
+                    // Requested rate above everything the camera reports (e.g. 60 fps on
+                    // devices that hide it): ask for exactly [X,X] and let the HAL decide.
+                    if (chosen == null) {
+                        int maxUpper = 0;
+                        for (android.util.Range<Integer> r : ranges) {
+                            maxUpper = Math.max(maxUpper, r.getUpper());
+                        }
+                        if (targetFrameRate > maxUpper) {
+                            chosen = new android.util.Range<>(targetFrameRate, targetFrameRate);
+                            FLog.w(TAG, "FPS " + targetFrameRate + " not reported by camera (max "
+                                    + maxUpper + ") - forcing AE range [" + targetFrameRate + ","
+                                    + targetFrameRate + "]");
+                        }
+                    }
                     // Finally, pick the closest upper bound
                     if (chosen == null) {
                         android.util.Range<Integer> best = ranges[0];

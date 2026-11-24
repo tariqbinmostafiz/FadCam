@@ -141,6 +141,7 @@
     <string name="fadrec_audio_source_none">No Audio</string>
     <string name="fadrec_audio_source_mic">Microphone</string>
     <string name="fadrec_audio_source_internal">Device Audio (Internal)</string>
+    <string name="fadrec_audio_source_both">Both (Mic + Device Audio)</string>
     <string name="screen_rec_audio_device_title">Audio Input Device</string>
     <string name="screen_rec_audio_device_default">Default (system routing)</string>
     <string name="screen_rec_audio_device_helper">Choose which microphone screen recordings record from. "Default" uses the system\u2019s automatic routing — the reliable option when using USB microphones.</string>

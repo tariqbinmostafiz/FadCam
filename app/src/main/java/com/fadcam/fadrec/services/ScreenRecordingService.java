@@ -487,7 +487,8 @@ public class ScreenRecordingService extends Service {
         // Get audio config
         String audioSource = sharedPreferencesManager.getScreenRecordingAudioSource();
         boolean prefersAudio = Constants.AUDIO_SOURCE_MIC.equals(audioSource)
-            || Constants.AUDIO_SOURCE_INTERNAL.equals(audioSource);
+            || Constants.AUDIO_SOURCE_INTERNAL.equals(audioSource)
+            || Constants.AUDIO_SOURCE_BOTH.equals(audioSource);
         boolean needsMicPermission = Constants.AUDIO_SOURCE_MIC.equals(audioSource);
         boolean hasMicPermission = ContextCompat.checkSelfPermission(
             this,

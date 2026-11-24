@@ -1301,11 +1301,12 @@ app:layout_constraintTop_toTopOf="parent"
                     android:src="@drawable/ic_arrow_right"
                     android:tint="@android:color/darker_gray"/>
             </LinearLayout>
-            <View style="@style/SettingsDivider" />
+            <View style="@style/SettingsDivider" android:visibility="gone" />
 
             <!-- Review Row (new) -->
             <LinearLayout
                 android:id="@+id/group_review"
+                android:visibility="gone"
                 style="@style/SettingsGroupRow"
                 >
                 <ImageView
@@ -1466,6 +1467,7 @@ app:layout_constraintTop_toTopOf="parent"
             android:layout_marginTop="20dp"
             android:layout_marginBottom="2dp"
             android:text="@string/tutorials_title"
+            android:visibility="gone"
             android:textColor="?attr/colorHeading"
             android:textSize="14sp"
             android:textStyle="bold"
@@ -1473,6 +1475,7 @@ app:layout_constraintTop_toTopOf="parent"
 
         <!-- Tutorial content card -->
         <LinearLayout
+            android:visibility="gone"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
@@ -1806,6 +1809,7 @@ app:layout_constraintTop_toTopOf="parent"
             android:layout_marginHorizontal="16dp"
             android:layout_marginTop="6dp"
             android:text="@string/tutorials_subtitle"
+            android:visibility="gone"
             android:textColor="#8E8E93"
             android:textSize="12sp"
             android:lineSpacingExtra="3dp"/>
@@ -1821,6 +1825,7 @@ app:layout_constraintTop_toTopOf="parent"
             android:layout_marginTop="24dp"
             android:layout_marginBottom="10dp"
             android:text="@string/fadcam_for_ios_title"
+            android:visibility="gone"
             android:textColor="?attr/colorHeading"
             android:textSize="14sp"
             android:textStyle="bold"
@@ -1828,6 +1833,7 @@ app:layout_constraintTop_toTopOf="parent"
 
         <androidx.cardview.widget.CardView
             android:id="@+id/group_ios_promo"
+            android:visibility="gone"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="24dp"

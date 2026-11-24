@@ -1054,7 +1054,8 @@ public class FadRecHomeFragment extends HomeFragment {
         // Check audio permission first if audio source requires it
         String audioSource = sharedPreferencesManager.getScreenRecordingAudioSource();
         if (Constants.AUDIO_SOURCE_MIC.equals(audioSource)
-                || Constants.AUDIO_SOURCE_INTERNAL.equals(audioSource)) {
+                || Constants.AUDIO_SOURCE_INTERNAL.equals(audioSource)
+                || Constants.AUDIO_SOURCE_BOTH.equals(audioSource)) {
             if (!isMicPermissionGranted()) {
                 FLog.d(TAG, "Audio permission not granted - showing muted recording dialog (source: " + audioSource + ")");
                 showMicPermissionDeniedDialog();
@@ -1069,6 +1070,13 @@ public class FadRecHomeFragment extends HomeFragment {
             sharedPreferencesManager.setScreenRecordingAudioSource(Constants.AUDIO_SOURCE_MIC);
         }
         
+        // "Both" on Android 9 or lower can only capture the mic
+        if (Constants.AUDIO_SOURCE_BOTH.equals(audioSource)
+                && Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            FLog.w(TAG, "Both audio needs Android 10+ - falling back to mic");
+            sharedPreferencesManager.setScreenRecordingAudioSource(Constants.AUDIO_SOURCE_MIC);
+        }
+
         // Audio permission granted or not needed, proceed with screen capture
         requestScreenCapturePermission();
     }
@@ -1122,7 +1130,8 @@ public class FadRecHomeFragment extends HomeFragment {
         if (sharedPreferencesManager == null) return false;
         String audioSource = sharedPreferencesManager.getScreenRecordingAudioSource();
         boolean prefersAudio = Constants.AUDIO_SOURCE_MIC.equals(audioSource)
-            || Constants.AUDIO_SOURCE_INTERNAL.equals(audioSource);
+            || Constants.AUDIO_SOURCE_INTERNAL.equals(audioSource)
+            || Constants.AUDIO_SOURCE_BOTH.equals(audioSource);
         return prefersAudio && isMicPermissionGranted() && !isRecordingForcedMuted;
     }
 
@@ -1502,6 +1511,8 @@ public class FadRecHomeFragment extends HomeFragment {
             iconLigature = "volume_off";
         } else if (Constants.AUDIO_SOURCE_INTERNAL.equals(audioSource)) {
             iconLigature = "volume_up";
+        } else if (Constants.AUDIO_SOURCE_BOTH.equals(audioSource)) {
+            iconLigature = "graphic_eq";
         } else {
             iconLigature = "mic"; // Microphone
         }
@@ -1519,6 +1530,8 @@ public class FadRecHomeFragment extends HomeFragment {
             buttonFadRecMute.setContentDescription(getString(R.string.fadrec_audio_source_none));
         } else if (Constants.AUDIO_SOURCE_INTERNAL.equals(audioSource)) {
             buttonFadRecMute.setContentDescription(getString(R.string.fadrec_audio_source_internal));
+        } else if (Constants.AUDIO_SOURCE_BOTH.equals(audioSource)) {
+            buttonFadRecMute.setContentDescription(getString(R.string.fadrec_audio_source_both));
         } else if (micWithDevice) {
             buttonFadRecMute.setContentDescription(deviceName);
         } else {
@@ -1548,6 +1561,9 @@ public class FadRecHomeFragment extends HomeFragment {
                 color = 0xFFFFFFFF;
             } else if (Constants.AUDIO_SOURCE_INTERNAL.equals(audioSource)) {
                 label = "INT";
+                color = 0xFFFFFFFF;
+            } else if (Constants.AUDIO_SOURCE_BOTH.equals(audioSource)) {
+                label = "MIX";
                 color = 0xFFFFFFFF;
             } else if (micWithDevice) {
                 label = shortDeviceLabel(deviceType);
@@ -1635,6 +1651,17 @@ public class FadRecHomeFragment extends HomeFragment {
             null,
             null,
             "speaker"  // Material Symbol icon
+        ));
+        items.add(new OptionItem(
+            Constants.AUDIO_SOURCE_BOTH,
+            getString(R.string.fadrec_audio_source_both),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "graphic_eq"  // Material Symbol icon
         ));
         
         // ── External audio input device options (independent cast prefs) ──

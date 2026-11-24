@@ -615,6 +615,12 @@ public class VideoSettingsFragment extends Fragment {
         for (Integer r : rates) {
             items.add(new com.fadcam.ui.picker.OptionItem(String.valueOf(r), r + " fps"));
         }
+        // Many phones (e.g. Xiaomi/Poco) do not report 60 fps via Camera2 even though the
+        // camera can do it. Always offer 60 fps; when the hardware did not report it, mark it
+        // experimental (if the camera rejects it, switch back to 30).
+        if (!rates.contains(60)) {
+            items.add(new com.fadcam.ui.picker.OptionItem("60", "60 fps (experimental)"));
+        }
         final String resultKey = "picker_result_framerate";
         getParentFragmentManager().setFragmentResultListener(resultKey, this, (key, bundle) -> {
             String sel = bundle.getString(com.fadcam.ui.picker.PickerBottomSheetFragment.BUNDLE_SELECTED_ID);
