@@ -49,7 +49,6 @@ public class SettingsHomeFragment extends Fragment {
     private View groupVideoQuick;
     private View groupAudioQuick;
     private View groupWatermarkFrame;   // the FrameLayout wrapping watermark row + badge
-    private View groupWatermarkBadge;
     private View groupScreenRecording;
     private View dividerBeforeScreenRec;
 
@@ -400,9 +399,6 @@ public class SettingsHomeFragment extends Fragment {
         if (watermarkRow != null && watermarkRow.getParent() instanceof ViewGroup) {
             groupWatermarkFrame = (View) watermarkRow.getParent();
         }
-        groupWatermarkBadge = root.findViewById(R.id.watermark_new_badge);
-        // The watermark settings screen is fully functional - hide the misleading "Coming Soon" badge.
-        if (groupWatermarkBadge != null) groupWatermarkBadge.setVisibility(View.GONE);
 
         groupScreenRecording = root.findViewById(R.id.group_screen_recording);
 
@@ -757,17 +753,9 @@ public class SettingsHomeFragment extends Fragment {
         sheet.show(getParentFragmentManager(), "debug_logging_switch_sheet");
     }
 
-    /** Show or hide the watermark NEW badge based on whether the feature has been seen. */
+    /** The Watermark row no longer shows a badge (it was a misleading "Coming Soon" pill). */
     private void manageBadgeVisibility(View root) {
-        try {
-            TextView watermarkBadge = root.findViewById(R.id.watermark_new_badge);
-            if (watermarkBadge != null) {
-                android.content.SharedPreferences prefs = requireContext()
-                        .getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE);
-                boolean hasSeen = prefs.getBoolean("seen_watermark", false);
-                watermarkBadge.setVisibility(hasSeen ? View.GONE : View.VISIBLE);
-            }
-        } catch (Exception ignore) {}
+        // intentionally empty
     }
 
     /**

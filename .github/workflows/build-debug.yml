@@ -18,6 +18,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # ---- দ্রুত পরীক্ষা (১ সেকেন্ডে): ভুল থাকলে লম্বা Gradle বিল্ডের আগেই ফেইল করে ----
+      # ১) কোডের/XML-এর প্রতিটি R.id / R.string / @drawable ... রেফারেন্সের সংজ্ঞা আছে কিনা
+      - name: Check resource references (fast fail)
+        run: python3 scripts/check_refs.py --baseline scripts/refs_baseline.txt
+
+      # ২) সব Java ফাইলের সিনট্যাক্স (javac parse-only)
+      - name: Check Java syntax (fast fail)
+        run: |
+          javac -proc:none -XDshould-stop.ifError=PARSE -XDshould-stop.ifNoError=PARSE \
+            -d /tmp/syntax-check $(find app/src/main/java -name '*.java')
+
       # settings.gradle.kts এই patched Media3 ফোল্ডার /tmp/media3-patched থেকে নেয়।
       # এটা না থাকলে muxer প্যাচ ছাড়া বিল্ড হবে বা ফেইল করবে।
       - name: Clone patched Media3 (required)

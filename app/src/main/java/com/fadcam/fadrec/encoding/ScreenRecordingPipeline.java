@@ -1179,6 +1179,7 @@ public class ScreenRecordingPipeline {
     private boolean systemPrimed = false;
     private final byte[] systemMixScratch = new byte[16384];
     private Thread systemAudioThread;
+    private volatile boolean systemCaptureRunning = false;
 
     /** Reads device audio continuously (blocking) into the FIFO so the mic loop never waits on it. */
     private void startSystemAudioCapture() {
@@ -1187,10 +1188,11 @@ public class ScreenRecordingPipeline {
         final ByteFifo fifo = new ByteFifo(65536);
         systemFifo = fifo;
         systemPrimed = false;
+        systemCaptureRunning = true;
         systemAudioThread = new Thread(() -> {
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
             byte[] tmp = new byte[2048];
-            while (isRecording && !isStopped) {
+            while (systemCaptureRunning) {
                 int n;
                 try {
                     n = rec.read(tmp, 0, tmp.length); // blocking
@@ -1718,6 +1720,7 @@ public class ScreenRecordingPipeline {
                 FLog.e(TAG, "Error stopping AudioRecord", e);
             }
         }
+        systemCaptureRunning = false;
         if (systemAudioRecord != null) {
             try {
                 systemAudioRecord.stop();
