@@ -111,6 +111,18 @@ public abstract class Constants {
         "is_recording_in_progress";
     /** Root mode kill-switch (RootTuner). Default true; does nothing without root. */
     public static final String PREF_ROOT_MODE_ENABLED = "root_mode_enabled";
+    /** Individual root tuning switches (all default true; only act while root mode is on). */
+    public static final String PREF_ROOT_FEATURE_OOM = "root_feature_oom";
+    public static final String PREF_ROOT_FEATURE_DOZE = "root_feature_doze";
+    public static final String PREF_ROOT_FEATURE_APPOPS = "root_feature_appops";
+    public static final String PREF_ROOT_FEATURE_BUCKET = "root_feature_bucket";
+    /** Resume recording automatically when the process was killed mid-recording (default true). */
+    public static final String PREF_ROOT_AUTO_RESUME = "root_auto_resume";
+    /** Thermal Guardian settings. */
+    public static final String PREF_THERMAL_GUARD_ENABLED = "thermal_guard_enabled";
+    public static final String PREF_THERMAL_AUTO_STOP = "thermal_auto_stop";
+    public static final String PREF_THERMAL_WARN_C = "thermal_warn_c";
+    public static final String PREF_THERMAL_STOP_C = "thermal_stop_c";
     // Camera runtime control preferences (persisted when user changes controls
     // while not recording)
     public static final String PREF_EXPOSURE_COMPENSATION =

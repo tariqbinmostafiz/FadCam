@@ -55,5 +55,40 @@ Tutorial Videos সেকশন (YouTube বাটনসহ), "FadCam for iOS" �
 বিল্ড ফেইল করলে Actions → রান → Summary-র `Gradle error summary` টেক্সট পাঠান।
 
 ---
-## ঘ) এখনও বাকি (Coming Soon)
-Thermal Guardian, Scheduled Recording, Audio Vision, Profiles, এবং মিনি অ্যাপ: Compass, Sound Meter, Sensor Dashboard, Speedometer, Clinometer, Pedometer, Metal Detector, Parking Marker, QR Generator। এগুলো পরের ব্যাচগুলোতে।
+## ঘ) ব্যাচ ৩ (এই প্যাচ সেট) — পরিবর্তন ও টেস্ট
+
+### ১. "Both" অডিওর ভাঙা শব্দ ঠিক করা
+- **কী বদলেছে:** ডিভাইস অডিও এখন আলাদা থ্রেডে ক্রমাগত পড়ে একটি বাফারে জমা হয়, মাইক লুপ সেখান থেকে নিয়ে মেশায়। আগে নন-ব্লকিং আংশিক রিডের ফাঁকে ফাঁকে শব্দ ভাঙত। মাইক চাঙ্ক ছোট (৪০ ms), দেরি সর্বোচ্চ ~৮৫ ms, জোরে হলে ক্লিপিং এড়াতে ০.৯ গেইন।
+- **টেস্ট:** আগের মতো (গান চালিয়ে কথা বলতে বলতে ২০–৩০ সেকেন্ড স্ক্রিন রেকর্ড)। ভাঙা/খসখসে শব্দ কমেছে কিনা শুনুন। ভিডিও চালিয়ে লিপ-সিঙ্ক ঠিক কিনা দেখুন।
+- **জানান:** আগের চেয়ে ভালো/একই/খারাপ, আর শব্দটা কেমন (ভাঙা, দেরি, ইকো)।
+
+### ২. Watermark "Coming Soon" ও Note from Developer
+- Watermark সারি থেকে ব্যাজ পুরোপুরি মুছে ফেলা হয়েছে।
+- "Note from Developer" Settings-এর উপর থেকে সরে এখন **About** পেজে নিচের বাটন হিসেবে আছে।
+
+### ৩. Stream: Custom প্রিসেট
+- **কোথায়:** Remote/Stream → Quality Preset → **Custom**।
+- **কী করা যায়:** রেজোলিউশন (Same as recording / 360p / 480p / 720p / 1080p), FPS ক্যাপ (১–৬০), বিটরেট (kbps)।
+- **টেস্ট:** Custom-এ ৭২০p, ১৫ fps, ১৫০০ kbps সেট করে স্ট্রিম চালু করে রেকর্ডিং শুরু করুন। ব্রাউজার/প্লেয়ারে রেজোলিউশন ও সুগমতা দেখুন। (পরিবর্তন প্রয়োগ করতে রেকর্ডিং আবার শুরু করতে হবে।)
+- **জানান:** ফ্রেমের আসল রেজোলিউশন, ল্যাগ আছে কিনা।
+
+### ৪. নতুন পেজ: Root & Diagnostics
+- **কোথায়:** Settings → Advanced → **Root & Diagnostics**।
+- **সুইচ:** Root mode (মাস্টার), Lower kill priority, Doze whitelist, Background app-ops, Active standby bucket, Resume after kill, Guardian watchdog (মডিউল চালু/বন্ধ)।
+- **Diagnostics:** "Run all checks" (রুট অ্যাক্সেস, প্রোভাইডার, SELinux, oom_score_adj লেখা যায় কিনা, সুরক্ষার অবস্থা, Guardian মডিউল, পারমিশন, শেষ প্রসেস-এক্সিট কারণ), "Test tuning now", "Copy report"।
+- **টেস্ট:** KernelSU Manager-এ FadCam-কে Superuser অনুমতি দিন → "Run all checks" চালান → "Copy report" করে রিপোর্ট আমাকে পাঠান। FAIL/WARN লাইনগুলো আমি দেখব।
+
+### ৫. Thermal Guardian (Coming Soon থেকে কার্যকর)
+- **কোথায়:** Settings → Advanced → Thermal Guardian। ডিফল্ট **বন্ধ**।
+- **কী করে:** রেকর্ডিং চলাকালীন ব্যাটারি তাপমাত্রা ও সিস্টেম থার্মাল স্ট্যাটাস দেখে। সতর্কতা তাপমাত্রা (ডিফল্ট ৪২°C) পেরোলে নোটিফিকেশন, থামার তাপমাত্রা (ডিফল্ট ৪৭°C) বা Critical স্ট্যাটাসে রেকর্ডিং নিরাপদে বন্ধ ও ফাইল সেভ।
+- **টেস্ট:** চালু করে সতর্কতা তাপমাত্রা ব্যাটারির বর্তমান তাপমাত্রার নিচে (যেমন ৩০°C) বসিয়ে রেকর্ড শুরু করুন → ১৫ সেকেন্ডের মধ্যে সতর্কতা আসা উচিত। থামার তাপমাত্রাও নিচে নামিয়ে পরীক্ষা করুন রেকর্ডিং থামে ও ফাইল ঠিক থাকে কিনা।
+
+### ৬. Profiles (Coming Soon থেকে কার্যকর)
+- **কোথায়:** Settings → Advanced → Profiles।
+- **কী করে:** বর্তমান ভিডিও/ক্যামেরা/অডিও/ওয়াটারমার্ক/স্ক্রিন রেকর্ড সেটিংস নাম দিয়ে সেভ; পরে এক ট্যাপে লোড, ওভাররাইট বা ডিলিট।
+- **টেস্ট:** ৬০ fps ও HEVC সেট করে "Dashcam" নামে সেভ → সেটিংস বদলে দিন → প্রোফাইল লোড করে মান ফিরল কিনা দেখুন (লোডের পর সেটিংস পেজ আবার খুলে দেখুন)। রেকর্ডিং চলাকালীন লোড আটকাবে।
+
+---
+## ঙ) এখনও বাকি (Coming Soon)
+- **Scheduled Recording ও Audio Vision:** এগুলো ব্যাকগ্রাউন্ড থেকে ক্যামেরা চালু করে, যা Android 11+ এ ব্লক। আপনার রুট পরীক্ষার (Guardian মডিউল ব্যাকগ্রাউন্ডে সার্ভিস চালু করতে পারে কিনা) ফল দেখে ডিজাইন করব।
+- **মিনি অ্যাপ:** Compass, Sound Meter, Sensor Dashboard, Speedometer, Clinometer, Pedometer, Metal Detector, Parking Marker, QR Generator।

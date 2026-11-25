@@ -446,18 +446,17 @@ public class SettingsHomeFragment extends Fragment {
         bindRow(root, R.id.group_security, () -> openSubFragment(new SecuritySettingsFragment()));
         bindRow(root, R.id.group_motion_lab, () -> openSubFragment(new MotionLabSettingsFragment()));
         bindRow(root, R.id.group_digital_forensics, () -> openSubFragment(new DigitalForensicsSettingsFragment()));
-        bindRow(root, R.id.group_thermal_guardian, () -> {
-            android.widget.Toast.makeText(requireContext(), R.string.mini_app_coming_soon_desc, android.widget.Toast.LENGTH_SHORT).show();
-        });
+        bindRow(root, R.id.group_thermal_guardian, () -> openSubFragment(new ThermalGuardianSettingsFragment()));
+        hideComingSoonBadge(root, R.id.group_thermal_guardian);
+        bindRow(root, R.id.group_root_settings, () -> openSubFragment(new RootSettingsFragment()));
         bindRow(root, R.id.group_audio_vision, () -> {
             android.widget.Toast.makeText(requireContext(), R.string.mini_app_coming_soon_desc, android.widget.Toast.LENGTH_SHORT).show();
         });
         bindRow(root, R.id.group_scheduled_recording, () -> {
             android.widget.Toast.makeText(requireContext(), R.string.mini_app_coming_soon_desc, android.widget.Toast.LENGTH_SHORT).show();
         });
-        bindRow(root, R.id.group_profiles, () -> {
-            android.widget.Toast.makeText(requireContext(), R.string.mini_app_coming_soon_desc, android.widget.Toast.LENGTH_SHORT).show();
-        });
+        bindRow(root, R.id.group_profiles, () -> openSubFragment(new ProfilesSettingsFragment()));
+        hideComingSoonBadge(root, R.id.group_profiles);
         bindRow(root, R.id.group_automation, () -> openSubFragment(new AutomationSettingsFragment()));
         bindRow(root, R.id.group_widgets, () -> openSubFragment(new ShortcutsSettingsFragment()));
         bindRow(root, R.id.group_notifications, () -> openSubFragment(new NotificationSettingsFragment()));
@@ -628,6 +627,25 @@ public class SettingsHomeFragment extends Fragment {
                 }
             }
         });
+    }
+
+    /** Removes the orange "Coming Soon" pill from a row whose feature is now implemented. */
+    private void hideComingSoonBadge(View root, int rowId) {
+        View row = root.findViewById(rowId);
+        if (row == null) return;
+        final String soon = getString(R.string.remote_coming_soon_badge);
+        java.util.ArrayDeque<View> queue = new java.util.ArrayDeque<>();
+        queue.add(row);
+        while (!queue.isEmpty()) {
+            View v = queue.poll();
+            if (v instanceof android.widget.TextView
+                    && soon.contentEquals(((android.widget.TextView) v).getText())) {
+                v.setVisibility(View.GONE);
+            } else if (v instanceof ViewGroup) {
+                ViewGroup g = (ViewGroup) v;
+                for (int i = 0; i < g.getChildCount(); i++) queue.add(g.getChildAt(i));
+            }
+        }
     }
 
     private void openSubFragment(Fragment fragment) {

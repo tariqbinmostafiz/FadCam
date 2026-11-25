@@ -7199,6 +7199,7 @@ public class RecordingService extends Service {
                 recordingWakeLock.acquire();
             // Phase1 (root, optional): keep-alive tuning while recording. No-op without root.
             com.fadcam.root.RootTuner.onRecordingStarted(getApplicationContext());
+            com.fadcam.thermal.ThermalGuardian.onRecordingStarted(getApplicationContext());
 
             ensureWatermarkInfoProvider();
 
@@ -7496,6 +7497,11 @@ public class RecordingService extends Service {
 
     /** Crash-loop guard: at most 3 automatic resumes per 10 minutes. */
     private boolean allowAutoResume() {
+        if (!getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(Constants.PREF_ROOT_AUTO_RESUME, true)) {
+            FLog.i(TAG, "Auto-resume disabled in settings");
+            return false;
+        }
         android.content.SharedPreferences g = getSharedPreferences("fadcam_resume_guard", Context.MODE_PRIVATE);
         long now = System.currentTimeMillis();
         long windowStart = g.getLong("window_start", 0L);

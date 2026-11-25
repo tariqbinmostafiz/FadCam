@@ -3108,4 +3108,6 @@ For the smoothest playback experience, you can use an external player like VLC. 
     <string name="remote_quality_custom">Custom</string>
     <string name="remote_quality_custom_desc">Set bitrate, FPS and resolution manually</string>
     <string name="stream_custom_title">Custom stream settings</string>
+    <string name="root_settings_title">Root &amp; Diagnostics</string>
+    <string name="root_settings_subtitle">Root features, switches and self-test</string>
 </resources>

@@ -72,17 +72,57 @@ public final class RootTuner {
         }
         final String pkg = app.getPackageName();
         final int pid = Process.myPid();
-        RootBridge.Result r = RootBridge.exec(10_000,
-                "echo before=$(cat /proc/" + pid + "/oom_score_adj)",
-                "cmd deviceidle whitelist +" + pkg,
-                "cmd appops set " + pkg + " RUN_IN_BACKGROUND allow",
-                "cmd appops set " + pkg + " RUN_ANY_IN_BACKGROUND allow",
-                "am set-standby-bucket " + pkg + " active",
-                "echo " + OOM_ADJ + " > /proc/" + pid + "/oom_score_adj",
-                "echo after=$(cat /proc/" + pid + "/oom_score_adj)");
+        RootBridge.Result r = RootBridge.exec(10_000, buildApplyCommands(app, pkg, pid));
         appliedPkg = pkg;
         FLog.i(TAG, "tick exit=" + r.exitCode + " " + r.out.replace('\n', ' ')
                 + (r.err.isEmpty() ? "" : " | err=" + r.err.replace('\n', ' ')));
+    }
+
+    private static String[] buildApplyCommands(Context app, String pkg, int pid) {
+        java.util.List<String> cmds = new java.util.ArrayList<>();
+        cmds.add("echo before=$(cat /proc/" + pid + "/oom_score_adj)");
+        if (flag(app, Constants.PREF_ROOT_FEATURE_DOZE)) {
+            cmds.add("cmd deviceidle whitelist +" + pkg);
+        }
+        if (flag(app, Constants.PREF_ROOT_FEATURE_APPOPS)) {
+            cmds.add("cmd appops set " + pkg + " RUN_IN_BACKGROUND allow");
+            cmds.add("cmd appops set " + pkg + " RUN_ANY_IN_BACKGROUND allow");
+        }
+        if (flag(app, Constants.PREF_ROOT_FEATURE_BUCKET)) {
+            cmds.add("am set-standby-bucket " + pkg + " active");
+        }
+        if (flag(app, Constants.PREF_ROOT_FEATURE_OOM)) {
+            cmds.add("echo " + OOM_ADJ + " > /proc/" + pid + "/oom_score_adj");
+        }
+        cmds.add("echo after=$(cat /proc/" + pid + "/oom_score_adj)");
+        return cmds.toArray(new String[0]);
+    }
+
+    private static boolean flag(Context app, String key) {
+        return prefs(app).getBoolean(key, true);
+    }
+
+    /**
+     * One-shot test used by the Root settings page: applies the enabled tuning, reports the
+     * result, then reverts doze/appops. Works even when not recording.
+     */
+    public static String testCycle(Context ctx) {
+        Context app = ctx.getApplicationContext();
+        if (!RootBridge.isRootAvailable()) return "Root not available";
+        String pkg = app.getPackageName();
+        int pid = Process.myPid();
+        RootBridge.Result r = RootBridge.exec(15_000, buildApplyCommands(app, pkg, pid));
+        String report = "exit=" + r.exitCode + " " + r.out.replace('\n', ' ')
+                + (r.err.isEmpty() ? "" : " | err=" + r.err.replace('\n', ' '));
+        if (!isRecording(app)) {
+            // Not recording: do not leave the tuning applied.
+            RootBridge.exec(10_000,
+                    "cmd deviceidle whitelist -" + pkg,
+                    "cmd appops set " + pkg + " RUN_IN_BACKGROUND default",
+                    "cmd appops set " + pkg + " RUN_ANY_IN_BACKGROUND default");
+            report += " (reverted: not recording)";
+        }
+        return report;
     }
 
     private static synchronized void stopInternal(Context app) {
