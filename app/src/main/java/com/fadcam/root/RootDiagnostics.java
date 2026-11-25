@@ -86,7 +86,7 @@ public final class RootDiagnostics {
                     "echo appops=$(cmd appops get " + pkg + " RUN_ANY_IN_BACKGROUND 2>&1 | head -1)",
                     "echo bucket=$(am get-standby-bucket " + pkg + " 2>&1 | head -1)");
             out.add(new Check("Background protection", Level.INFO,
-                    tune.out.replace('\n', ' | ')
+                    tune.out.replace("\n", " | ")
                             + (recording ? "" : " | (tuning is applied only while recording)")));
 
             RootBridge.Result mod = RootBridge.exec(10_000,
